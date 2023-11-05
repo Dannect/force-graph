@@ -4,13 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e43de043-049d-4231-84b0-6c8bc1486e5e" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/untitled/hello.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/untitled/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/basic/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/example/basic/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/canvas-force-graph.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/canvas-force-graph.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/force-graph.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/force-graph.js" afterDir="false" />
-    </list>
+    <list default="true" id="e43de043-049d-4231-84b0-6c8bc1486e5e" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -71,7 +65,7 @@
       <workItem from="1698853393616" duration="15993000" />
       <workItem from="1699173445571" duration="396000" />
       <workItem from="1699173843640" duration="16000" />
-      <workItem from="1699173867580" duration="2805000" />
+      <workItem from="1699173867580" duration="5300000" />
     </task>
     <servers />
   </component>
