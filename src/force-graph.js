@@ -11,12 +11,10 @@ import ColorTracker from 'canvas-color-tracker';
 import CanvasForceGraph from './canvas-force-graph';
 import linkKapsule from './kapsule-link.js';
 
-const HOVER_CANVAS_THROTTLE_DELAY = 800; // ms to throttle shadow canvas updates for perf improvement
 const ZOOM2NODES_FACTOR = 4;
 
 // Expose config from forceGraph
 const bindFG = linkKapsule('forceGraph', CanvasForceGraph);
-const bindBoth = linkKapsule(['forceGraph', 'shadowGraph'], CanvasForceGraph);
 const linkedProps = Object.assign(
   ...[
     'nodeColor',
@@ -49,16 +47,6 @@ const linkedProps = Object.assign(
     'onEngineTick',
     'onEngineStop'
   ].map(p => ({ [p]: bindFG.linkProp(p)})),
-  ...[
-    'nodeRelSize',
-    'nodeId',
-    'nodeVal',
-    'nodeVisibility',
-    'linkSource',
-    'linkTarget',
-    'linkVisibility',
-    'linkCurvature'
-  ].map(p => ({ [p]: bindBoth.linkProp(p)}))
 );
 const linkedMethods = Object.assign(...[
   'd3Force',
@@ -79,7 +67,7 @@ function adjustCanvasSize(state) {
     curHeight /= pxScale;
 
     // Resize canvases
-    [state.canvas, state.shadowCanvas].forEach(canvas => {
+    [state.canvas].forEach(canvas => {
       // Element size
       canvas.style.width = `${state.width}px`;
       canvas.style.height = `${state.height}px`;
@@ -116,8 +104,6 @@ function clearCanvas(ctx, width, height) {
   ctx.restore();        //restore transforms
 }
 
-//
-
 export default Kapsule({
   props:{
     width: { default: window.innerWidth, onChange: (_, state) => adjustCanvasSize(state), triggerUpdate: false } ,
@@ -127,7 +113,6 @@ export default Kapsule({
       onChange: ((d, state) => {
         [{ type: 'Node', objs: d.nodes }, { type: 'Link', objs: d.links }].forEach(hexIndex);
         state.forceGraph.graphData(d);
-        state.shadowGraph.graphData(d);
 
         function hexIndex({ type, objs }) {
           objs
@@ -147,16 +132,8 @@ export default Kapsule({
     backgroundColor: { onChange(color, state) { state.canvas && color && (state.canvas.style.background = color) }, triggerUpdate: false },
     nodeLabel: { default: 'name', triggerUpdate: false },
     nodePointerAreaPaint: { onChange(paintFn, state) {
-      state.shadowGraph.nodeCanvasObject(!paintFn ? null :
-        (node, ctx, globalScale) => paintFn(node, node.__indexColor, ctx, globalScale)
-      );
-      state.flushShadowCanvas && state.flushShadowCanvas();
     }, triggerUpdate: false },
     linkPointerAreaPaint: { onChange(paintFn, state) {
-      state.shadowGraph.linkCanvasObject(!paintFn ? null :
-        (link, ctx, globalScale) => paintFn(link, link.__indexColor, ctx, globalScale)
-      );
-      state.flushShadowCanvas && state.flushShadowCanvas();
     }, triggerUpdate: false },
     linkLabel: { default: 'name', triggerUpdate: false },
     linkHoverPrecision: { default: 4, triggerUpdate: false },
@@ -334,11 +311,6 @@ export default Kapsule({
     lastSetZoom: 1,
     zoom: d3Zoom(),
     forceGraph: new CanvasForceGraph(),
-    shadowGraph: new CanvasForceGraph()
-      .cooldownTicks(0)
-      .nodeColor('__indexColor')
-      .linkColor('__indexColor')
-      .isShadow(true),
     colorTracker: new ColorTracker() // indexed objects for rgb lookup
   }),
 
@@ -356,36 +328,14 @@ export default Kapsule({
     if (state.backgroundColor) state.canvas.style.background = state.backgroundColor;
     container.appendChild(state.canvas);
 
-    state.shadowCanvas = document.createElement('canvas');
-
-    // Show shadow canvas
-    //state.shadowCanvas.style.position = 'absolute';
-    //state.shadowCanvas.style.top = '0';
-    //state.shadowCanvas.style.left = '0';
-    //container.appendChild(state.shadowCanvas);
-
     const ctx = state.canvas.getContext('2d');
-    const shadowCtx = state.shadowCanvas.getContext('2d', { willReadFrequently: true });
 
     const pointerPos = { x: -1e12, y: -1e12 };
-    const getObjUnderPointer = () => {
-      let obj = null;
-      const pxScale = window.devicePixelRatio;
-      const px = (pointerPos.x > 0 && pointerPos.y > 0)
-        ? shadowCtx.getImageData(pointerPos.x * pxScale, pointerPos.y * pxScale, 1, 1)
-        : null;
-      // Lookup object per pixel color
-      px && (obj = state.colorTracker.lookup(px.data));
-      return obj;
-    };
-
     // Setup node drag interaction
     d3Select(state.canvas).call(
       d3Drag()
         .subject(() => {
           if (!state.enableNodeDrag) { return null; }
-          const obj = getObjUnderPointer();
-          return (obj && obj.type === 'Node') ? obj.d : null; // Only drag nodes
         })
         .on('start', ev => {
           const obj = ev.subject;
@@ -465,7 +415,7 @@ export default Kapsule({
       )
       .on('zoom', ev => {
         const t = ev.transform;
-        [ctx, shadowCtx].forEach(c => {
+        [ctx].forEach(c => {
           resetTransform(c);
           c.translate(t.x, t.y);
           c.scale(t.k, t.k);
@@ -572,22 +522,6 @@ export default Kapsule({
     });
 
     state.forceGraph(ctx);
-    state.shadowGraph(shadowCtx);
-
-    //
-
-    const refreshShadowCanvas = throttle(() => {
-      // wipe canvas
-      clearCanvas(shadowCtx, state.width, state.height);
-
-      // Adjust link hover area
-      state.shadowGraph.linkWidth(l => accessorFn(state.linkWidth)(l) + state.linkHoverPrecision);
-
-      // redraw
-      const t = d3ZoomTransform(state.canvas);
-      state.shadowGraph.globalScale(t.k).tickFrame();
-    }, HOVER_CANVAS_THROTTLE_DELAY);
-    state.flushShadowCanvas = refreshShadowCanvas.flush; // hook to immediately invoke shadow canvas paint
 
     // Kick-off renderer
     (this._animationCycle = function animate() { // IIFE
@@ -625,8 +559,6 @@ export default Kapsule({
 
           state.hoverObj = obj;
         }
-
-        doRedraw && refreshShadowCanvas();
       }
 
       if(doRedraw) {

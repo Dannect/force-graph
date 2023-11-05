@@ -23,18 +23,16 @@ const DAG_LEVEL_NODE_RATIO = 2;
 const notifyRedraw = (_, state) => state.onNeedsRedraw && state.onNeedsRedraw();
 
 const updDataPhotons = (_, state) => {
-  if (!state.isShadow) {
-    // Add photon particles
-    const linkParticlesAccessor = accessorFn(state.linkDirectionalParticles);
-    state.graphData.links.forEach(link => {
-      const numPhotons = Math.round(Math.abs(linkParticlesAccessor(link)));
-      if (numPhotons) {
-        link.__photons = [...Array(numPhotons)].map(() => ({}));
-      } else {
-        delete link.__photons;
-      }
-    });
-  }
+  // Add photon particles
+  const linkParticlesAccessor = accessorFn(state.linkDirectionalParticles);
+  state.graphData.links.forEach(link => {
+    const numPhotons = Math.round(Math.abs(linkParticlesAccessor(link)));
+    if (numPhotons) {
+      link.__photons = [...Array(numPhotons)].map(() => ({}));
+    } else {
+      delete link.__photons;
+    }
+  });
 };
 
 export default Kapsule({
@@ -93,7 +91,6 @@ export default Kapsule({
     onEngineTick: { default: () => {}, triggerUpdate: false },
     onEngineStop: { default: () => {}, triggerUpdate: false },
     onNeedsRedraw: { triggerUpdate: false },
-    isShadow: { default: false, triggerUpdate: false }
   },
 
   methods: {
@@ -119,10 +116,10 @@ export default Kapsule({
     },
     isEngineRunning: state => !!state.engineRunning,
     tickFrame: function(state) {
-      !state.isShadow && layoutTick();
+      layoutTick();
       paintLinks();
-      !state.isShadow && paintArrows();
-      !state.isShadow && paintPhotons();
+      paintArrows();
+      paintPhotons();
       paintNodes();
 
       return this;
@@ -153,9 +150,6 @@ export default Kapsule({
 
         const ctx = state.ctx;
 
-        // Draw wider nodes by 1px on shadow canvas for more precise hovering (due to boundary anti-aliasing)
-        const padAmount = state.isShadow / state.globalScale;
-
         const visibleNodes = state.graphData.nodes.filter(getVisibility);
 
         ctx.save();
@@ -173,7 +167,7 @@ export default Kapsule({
           }
 
           // Draw wider nodes by 1px on shadow canvas for more precise hovering (due to boundary anti-aliasing)
-          const r = Math.sqrt(Math.max(0, getVal(node) || 1)) * state.nodeRelSize + padAmount;
+          const r = Math.sqrt(Math.max(0, getVal(node) || 1)) * state.nodeRelSize;
 
           ctx.beginPath();
           ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
@@ -197,9 +191,6 @@ export default Kapsule({
         const getLinkCanvasObjectMode = accessorFn(state.linkCanvasObjectMode);
 
         const ctx = state.ctx;
-
-        // Draw wider lines by 2px on shadow canvas for more precise hovering (due to boundary anti-aliasing)
-        const padAmount = state.isShadow * 2;
 
         const visibleLinks = state.graphData.links.filter(getVisibility);
 
@@ -232,7 +223,7 @@ export default Kapsule({
         Object.entries(linksPerColor).forEach(([color, linksPerWidth]) => {
           const lineColor = !color || color === 'undefined' ? 'rgba(0,0,0,0.15)' : color;
           Object.entries(linksPerWidth).forEach(([width, linesPerLineDash]) => {
-            const lineWidth = (width || 1) / state.globalScale + padAmount;
+            const lineWidth = (width || 1) / state.globalScale;
             Object.entries(linesPerLineDash).forEach(([dashSegments, links]) => {
               const lineDashSegments = getLineDash(links[0]);
               ctx.beginPath();
